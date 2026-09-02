@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { db } from './firebaseConfig';
+import { db } from '../config/firebaseConfig';
 import { ref, onValue, set, push, remove } from 'firebase/database';
 
 const SENHA_CORRETA = '1234';
