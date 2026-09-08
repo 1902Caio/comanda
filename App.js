@@ -12,6 +12,8 @@ import MesasScreen from './src/screens/MesasScreen';
 import BalcaoScreen from './src/screens/BalcaoScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import CardapioScreen from './src/screens/CardapioScreen';
+import TesteImpressaoScreen from './src/screens/TesteImpressaoScreen';
+
 
 export default function App() {
   const [abaAtiva, setAbaAtiva] = useState('comanda');
@@ -40,6 +42,7 @@ export default function App() {
 
   if (!usuario) {
     return <LoginScreen />;
+      //return <TesteImpressaoScreen />;
 
   }
 

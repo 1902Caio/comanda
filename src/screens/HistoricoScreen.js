@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { styles } from '../styles/styles';
+import { imprimirComprovante } from '../utils/imprimirComprovante';
 
 export default function HistoricoScreen({
   historicoComandas,
@@ -48,6 +49,13 @@ export default function HistoricoScreen({
                     <Text style={{ fontWeight: 'bold' }}>Total:</Text>
                     <Text style={{ fontWeight: 'bold', color: '#1976D2' }}>R$ {item.total.toFixed(2)}</Text>
                   </View>
+
+                  <TouchableOpacity 
+                    style={[styles.botaoAzul, { backgroundColor: '#28a745', marginTop: 10 }]} 
+                    onPress={() => imprimirComprovante(item)}
+                  >
+                    <Text style={styles.textoBotao}>🖨️ Reimprimir Cupom</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             />

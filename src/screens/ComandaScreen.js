@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { styles } from '../styles/styles';
+import { imprimirComprovante } from '../utils/imprimirComprovante';
 
 export default function ComandaScreen({
   mesa,
@@ -71,8 +72,20 @@ export default function ComandaScreen({
           <Text style={styles.labelTotal}>Subtotal:</Text>
           <Text style={styles.valorTotal}>R$ {calcularTotalRascunho().toFixed(2)}</Text>
         </View>
+
         <TouchableOpacity style={styles.botaoAzul} onPress={enviarPedido}>
           <Text style={styles.textoBotao}>Enviar Pedido para o Balcão</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.botaoAzul, { backgroundColor: '#28a745', marginTop: 10 }]} 
+          onPress={() => imprimirComprovante({
+            mesa,
+            itens: itensComanda,
+            total: calcularTotalRascunho()
+          })}
+        >
+          <Text style={styles.textoBotao}>🖨️ Imprimir Comprovante</Text>
         </TouchableOpacity>
       </View>
     </View>
