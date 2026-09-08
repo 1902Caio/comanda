@@ -45,25 +45,34 @@ export default function ComandaScreen({
         {itensComanda.length === 0 ? (
           <Text style={styles.textoVazio}>Nenhum item selecionado.</Text>
         ) : (
-          <FlatList
-            data={itensComanda}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.linhaItemComanda}>
-                <Text style={styles.textoItem}>
-                  {item.quantidade}x {item.nome}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={[styles.nomeProduto, { marginRight: 10 }]}>
-                    R$ {(item.preco * item.quantidade).toFixed(2)}
-                  </Text>
-                  <TouchableOpacity onPress={() => removerItemComanda(item.id)} style={styles.botaoRemover}>
-                    <Text style={styles.textoRemover}>❌</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          />
+         <FlatList
+  data={itensComanda}
+  keyExtractor={(item) => String(item.id)}
+  renderItem={({ item }) => {
+    const precoItem = Number(item.preco) || 0;
+    const quantidadeItem = Number(item.quantidade) || 1;
+    const totalItem = precoItem * quantidadeItem;
+
+    return (
+      <View style={styles.linhaItemComanda}>
+        <Text style={styles.textoItem}>
+          {quantidadeItem}x {item.nome}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[styles.nomeProduto, { marginRight: 10 }]}>
+            R$ {totalItem.toFixed(2)}
+          </Text>
+          <TouchableOpacity 
+            onPress={() => removerItemComanda(item.id)} 
+            style={styles.botaoRemover}
+          >
+            <Text style={styles.textoRemover}>❌</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }}
+/>
         )}
       </View>
 

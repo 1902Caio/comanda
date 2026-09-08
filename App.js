@@ -12,38 +12,33 @@ import MesasScreen from './src/screens/MesasScreen';
 import BalcaoScreen from './src/screens/BalcaoScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import CardapioScreen from './src/screens/CardapioScreen';
-import TesteImpressaoScreen from './src/screens/TesteImpressaoScreen';
-
 
 export default function App() {
   const [abaAtiva, setAbaAtiva] = useState('comanda');
-  const [usuario, setUsuario]= useState(null);
+  const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
-  
   const c = useComandas();
 
-  useEffect(() =>{
-    const unsubscribe =onAuthStateChanged(auth, (user) => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
       setCarregando(false);
     });
 
-    return () =>unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   if (carregando) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large"  color="#0000ff" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
       </View>
     );
   }
 
   if (!usuario) {
     return <LoginScreen />;
-      //return <TesteImpressaoScreen />;
-
   }
 
   return (
@@ -91,6 +86,7 @@ export default function App() {
           senhaDigitada={c.senhaDigitada}
           setSenhaDigitada={c.setSenhaDigitada}
           verificarSenha={c.verificarSenha}
+          setHistoricoAutorizado={c.setHistoricoAutorizado}
         />
       )}
 

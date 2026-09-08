@@ -13,37 +13,58 @@ export default function CardapioScreen({
 }) {
   return (
     <View style={styles.conteudoAba}>
-      <Text style={styles.titulo}>🍔 Cardápio</Text>
+      <Text style={styles.titulo}>📋 Gerenciar Cardápio</Text>
 
       <View style={styles.form}>
-        <TextInput style={styles.input} placeholder="Nome do produto" value={novoNome} onChangeText={setNovoNome} />
+        <Text style={styles.label}>Nome do Produto:</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Preço (ex: 12.50)"
+          style={styles.inputMesa}
+          placeholder="Ex: Churrasco"
+          value={novoNome}
+          onChangeText={setNovoNome}
+        />
+
+        <Text style={styles.label}>Preço (R$):</Text>
+        <TextInput
+          style={styles.inputMesa}
+          placeholder="Ex: 25.00"
           value={novoPreco}
           onChangeText={setNovoPreco}
           keyboardType="numeric"
         />
-        <TouchableOpacity style={styles.botaoAzul} onPress={adicionarProdutoCardapio}>
-          <Text style={styles.textoBotao}>Cadastrar Produto</Text>
+
+        <TouchableOpacity 
+          style={[styles.botaoAzul, { backgroundColor: '#28a745', marginTop: 10 }]} 
+          onPress={adicionarProdutoCardapio}
+        >
+          <Text style={styles.textoBotao}>➕ Cadastrar Produto</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={cardapio}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.linhaItemComanda}>
-            <Text style={styles.textoItem}>{item.nome}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ marginRight: 10 }}>R$ {item.preco.toFixed(2)}</Text>
-              <TouchableOpacity onPress={() => removerProdutoCardapio(item.id)} style={styles.botaoRemover}>
+      <Text style={styles.subtitulo}>Itens do Cardápio Atual:</Text>
+      
+      {cardapio.length === 0 ? (
+        <Text style={styles.textoVazio}>Nenhum produto cadastrado.</Text>
+      ) : (
+        <FlatList
+          data={cardapio}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <View style={styles.linhaItemComanda}>
+              <View>
+                <Text style={styles.nomeProduto}>{item.nome}</Text>
+                <Text style={styles.precoVerde}>R$ {Number(item.preco).toFixed(2)}</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => removerProdutoCardapio(item.id)} 
+                style={styles.botaoRemover}
+              >
                 <Text style={styles.textoRemover}>❌</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </View>
   );
 }
