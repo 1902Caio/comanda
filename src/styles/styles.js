@@ -108,5 +108,71 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FB8C00'
   },
-  textoBotao: { color: '#fff', fontWeight: 'bold' }
+  textoBotao: { color: '#fff', fontWeight: 'bold' },
+
+  // --- NOVOS ESTILOS PARA O MENU HAMBÚRGUER E DRAWER ---
+  containerMenuSuperior: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff', // Mantém a cor de fundo padrão
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  abasPrincipais: {
+    flexDirection: 'row',
+    flex: 1,
+    alignItems: 'center',
+  },
+  botaoHamburger: {
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayModal: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Fundo escuro translúcido
+  },
+  fundoInvisivel: {
+    flex: 1, // Ocupa o resto da tela para permitir fechar ao tocar fora
+  },
+  gavetaLateral: {
+    width: '75%', // Ocupa 75% da largura da tela pela lateral direita/esquerda
+    height: '100%',
+    backgroundColor: '#ffffff', // Cor de fundo da gaveta
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  headerGaveta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    paddingBottom: 15,
+  },
+  tituloGaveta: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  itemGaveta: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  textoItemGaveta: {
+    fontSize: 16,
+    color: '#4b5563',
+    fontWeight: '500',
+  },
 });

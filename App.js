@@ -17,6 +17,7 @@ export default function App() {
   const [abaAtiva, setAbaAtiva] = useState('comanda');
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [menuAberto, setMenuAberto] = useState(false);
 
   const c = useComandas();
 
