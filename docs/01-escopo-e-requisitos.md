@@ -1,6 +1,5 @@
 # Bloco 1 — Escopo e requisitos
 
-**Estado:** rascunho inicial, baseado no código existente e nas especificações fornecidas.
 
 ## 1. Propósito
 
@@ -10,15 +9,20 @@ O RestauranteApp é uma aplicação mobile para apoiar operações de restaurant
 
 | Ator | Responsabilidade no escopo |
 | --- | --- |
-| Funcionário do restaurante | Registar itens em comandas, acompanhar mesas e indicar fecho/pagamento. O perfil exato (garçom, caixa ou outro) ainda precisa de confirmação. |
-| Administrador/gestor | Gerir cardápio e consultar dados do histórico financeiro. Permissões específicas ainda precisam de confirmação. |
+| Garçom | Usa as funcionalidades operacionais do aplicativo, incluindo lançamento de pedidos e acompanhamento das mesas. |
+| Caixa | Tem as mesmas opções e o mesmo acesso operacional do garçom. |
+| Gerente | É a pessoa autorizada, na operação do restaurante, a inserir a senha local para consultar o histórico de vendas e gerenciar produtos e seções do cardápio. |
 | Firebase Authentication | Serviço externo que autentica a sessão da aplicação. |
 
-Os papéis funcionário e administrador são uma proposta de domínio; o código atual não implementa autorização por papel.
+Garçom e caixa entram pela mesma conta compartilhada. O aplicativo não identifica qual dessas pessoas está usando essa conta.
 
-## 3. Requisitos funcionais iniciais
+### Acesso ao histórico: comportamento atual
 
-Os requisitos abaixo descrevem funcionalidades visíveis no código atual, salvo quando marcados como **planejado**.
+O histórico fica oculto na interface até a senha local ser validada. A senha está definida no código cliente e não está associada a uma conta individual de gerente. O aplicativo também inicia a leitura do histórico no Firebase para o utilizador autenticado; portanto, esse bloqueio descreve a interface atual, não uma autorização segura dos dados.
+
+## 3. Requisitos funcionais existentes
+
+Um requisito funcional descreve uma ação que o sistema permite realizar. A lista abaixo registra ações já presentes no código.
 
 | ID | Requisito | Estado |
 | --- | --- | --- |
@@ -28,50 +32,100 @@ Os requisitos abaixo descrevem funcionalidades visíveis no código atual, salvo
 | RF-04 | Consultar comandas ativas e ajustar itens de uma mesa. | Existente |
 | RF-05 | Marcar uma comanda como fechada e permitir reabri-la. | Existente |
 | RF-06 | Confirmar o pagamento, guardar a comanda no histórico e removê-la das comandas ativas. | Existente |
-| RF-07 | Restringir a visualização do histórico através de uma senha. | Parcial: existe uma validação local no cliente; não é controlo de acesso seguro no servidor. |
-| RF-08 | Disponibilizar uma API própria para as operações do restaurante. | Planejado; não identificada no código atual. |
+| RF-07 | Ocultar o histórico até que seja inserida a senha local. | Existente na interface; a senha não identifica o gerente nem restringe o acesso aos dados no Firebase. |
+| RF-08 | No Balcão, permitir imprimir o comprovante de uma comanda fechada; no Histórico, permitir reimprimir o comprovante. | Existente |
+| RF-09 | Exigir a senha local para entrar no gerenciamento de produtos e seções do cardápio. | Implementado no código; validação manual pendente |
+| RF-10 | Permitir ao gerente cadastrar, editar e excluir seções e produtos, com confirmação antes de exclusões. | Implementado no código; validação manual pendente |
+| RF-11 | Permitir organizar produtos em seções e escolher uma seção para consultar seus produtos ao lançar um pedido. | Implementado no código; validação manual pendente |
 
-## 4. Requisitos não funcionais iniciais
+### Critérios de aceitação confirmados
 
-| ID | Requisito | Nota / estado |
-| --- | --- | --- |
-| RNF-01 | Proteger dados e operações financeiras com autenticação e autorização verificadas no servidor. | Necessidade a implementar/validar; a senha local atual não satisfaz este requisito. |
-| RNF-02 | Manter consistência entre pagamento, histórico e remoção da comanda ativa. | Necessidade arquitetural; o fluxo atual executa gravações Firebase em sequência. |
-| RNF-03 | Exibir atualizações das comandas e do cardápio sem exigir recarregamento manual. | Implementado com listeners do Firebase Realtime Database. |
-| RNF-04 | Documentar e fixar versões compatíveis das tecnologias usadas. | Pendente de alinhamento: a instrução do repositório aponta para Expo SDK 54 e `package.json` declara Expo 57. |
-| RNF-05 | Disponibilizar a aplicação para dispositivos móveis e, conforme a configuração atual, web. | Plataformas declaradas no projeto; requisitos de desempenho e suporte ainda não definidos. |
+Critérios de aceitação são resultados observáveis que ajudam a verificar se um requisito está funcionando.
 
-## 5. Regras de negócio observadas
+#### RF-01 — Autenticação
 
-- Uma comanda precisa de mesa e pelo menos um item antes de ser enviada.
-- Não se podem adicionar itens a uma comanda marcada como fechada; é necessário reabri-la primeiro.
-- O pagamento confirmado gera um registo no histórico e remove a comanda ativa.
-- A aplicação calcula o total a partir do preço e da quantidade de cada item.
-- A senha atualmente usada para liberar o histórico está embutida no código do cliente. Deve ser tratada como implementação provisória, não como regra de segurança válida.
+- Enquanto verifica a sessão, o aplicativo mostra um indicador de carregamento.
+- Sem utilizador autenticado, mostra a tela de login.
+- Com credenciais inválidas, mostra um alerta de erro e permite tentar novamente.
+- Com autenticação bem-sucedida, mostra a área principal.
 
-## 6. Arquitetura e tecnologias: estado conhecido
+#### RF-02 — Cardápio
 
-- **Cliente:** React Native com Expo.
-- **Autenticação:** Firebase Authentication.
-- **Persistência e atualizações em tempo real:** Firebase Realtime Database.
-- **API própria:** prevista nas especificações, ainda não encontrada no repositório.
-- **Firestore:** mencionado como possibilidade nas especificações, mas o código atual importa `firebase/database`; portanto, a base observada é Realtime Database, não Firestore.
+- O cardápio mostra cada produto com nome e preço.
+- Para cadastrar um produto, é necessário informar nome e preço maior que zero.
+- Se os dados forem inválidos, aparece um alerta e o produto não é cadastrado.
+- Se o cadastro funcionar, o produto aparece no cardápio, surge uma mensagem de sucesso e os campos são limpos.
+- Ao tentar remover um produto, o aplicativo pede confirmação. Se cancelar, o produto permanece; se confirmar, é removido.
 
-Expo SDK 54 associa-se a React Native 0.81 e React 19.1 segundo a [documentação versionada do Expo](https://docs.expo.dev/versions/v54.0.0/). As versões declaradas no projeto são diferentes; a documentação de arquitetura deve ser atualizada quando essa divergência for resolvida.
+#### RF-03 — Criar ou atualizar uma comanda
 
-## 7. Fora do escopo deste bloco
+- O aplicativo exige o número da mesa e pelo menos um item; caso falte algum, mostra um alerta.
+- Se ainda não houver comanda para a mesa, cria uma.
+- Se já houver uma comanda aberta, acrescenta os novos itens a ela.
+- Se um produto já estiver na comanda, soma a nova quantidade à quantidade existente.
+- Se o salvamento funcionar, confirma o sucesso e limpa o rascunho do pedido.
 
-Casos de uso detalhados, diagramas, modelo de dados completo, contratos da API, implantação, critérios mensuráveis de desempenho e segurança serão documentados nos próximos blocos, depois de confirmados os requisitos.
+#### RF-04 — Consultar comandas ativas e ajustar itens
 
-## 8. Decisões em aberto
+- O aplicativo mostra as comandas ativas e os respetivos itens.
+- Numa comanda aberta, ao tocar no botão para remover, o aplicativo pede confirmação para remover uma unidade.
+- Se a pessoa cancelar, a comanda não é alterada; se confirmar, a quantidade diminui em um.
+- Quando a quantidade do produto chega a zero, esse produto é removido da comanda.
+- Se a remoção deixar a comanda sem itens, o aviso informa que a mesa será liberada; após a confirmação, a comanda é removida das comandas ativas.
 
-1. Quais papéis de utilizador existem e que ações cada papel pode executar?
-2. O sistema usará uma API própria como backend principal? Qual será a responsabilidade do Firebase depois dessa API existir?
-3. A persistência pretendida é Firebase Realtime Database ou Cloud Firestore?
-4. O histórico exige autenticação por conta, autorização por papel ou ambos? A senha fixa deve ser removida.
-5. O projeto terá suporte oficial a Android, iOS e web?
-6. Qual é a versão Expo alvo: SDK 54 (instrução local) ou SDK 57 (dependências atuais)?
+#### RF-05 — Fechar e reabrir uma comanda
 
-## Próximo bloco
+- Ao pedir para fechar uma comanda, o aplicativo pede confirmação.
+- Se cancelar, a comanda permanece aberta.
+- Se confirmar, a comanda fica marcada como fechada.
+- Enquanto estiver fechada, não aceita novos itens nem permite remover itens; ao tentar remover, o aplicativo orienta a reabrir a comanda.
+- Se for reaberta, volta a aceitar novos itens e permite remover unidades após confirmação.
 
-Validar este escopo e, em seguida, detalhar atores, permissões e regras de negócio num catálogo rastreável antes de desenhar os casos de uso.
+#### RF-06 — Confirmar pagamento e finalizar a comanda
+
+- Ao confirmar o pagamento, o aplicativo pede confirmação.
+- Se cancelar, não inicia a finalização.
+- Se confirmar, grava no histórico a mesa, os itens, o total e a data/hora do fechamento.
+- Depois, remove a comanda das comandas ativas e mostra uma mensagem de sucesso.
+- Se ocorrer um erro ao salvar, mostra um alerta de erro.
+
+#### RF-07 — Liberar a visualização do histórico
+
+- Antes da validação, o conteúdo do histórico fica oculto na tela.
+- Se a senha estiver incorreta, aparece um alerta e o histórico continua oculto.
+- Se a senha estiver correta, o histórico fica visível.
+- Depois da tentativa, o campo da senha é limpo.
+
+O RF-07 descreve o bloqueio da interface atual; não significa que o acesso aos dados no Firebase esteja restrito.
+
+#### RF-08 — Imprimir e reimprimir comprovantes
+
+- No Balcão, comandas fechadas mostram a opção para imprimir o comprovante; comandas abertas não mostram essa opção.
+- Ao selecionar a impressão no Balcão, o comprovante inclui a mesa, os itens, as quantidades, os preços e o total da comanda.
+- No Histórico, cada comanda permite reimprimir o comprovante com os dados guardados, incluindo a data de fechamento.
+- Imprimir ou reimprimir não altera o estado da comanda nem remove os seus dados.
+
+#### RF-09 — Acessar o gerenciamento do cardápio
+
+- Ao entrar no gerenciamento de produtos e seções, o aplicativo solicita a mesma senha local usada no Histórico.
+- Depois de validada, a senha permite permanecer no gerenciamento enquanto essa área estiver aberta.
+- Ao sair do gerenciamento, o acesso volta a ficar bloqueado e a senha precisa ser validada novamente numa próxima entrada.
+- A senha é uma barreira na interface do aplicativo; não identifica uma conta individual de gerente nem restringe, por si só, os dados no Firebase.
+
+#### RF-10 — Gerenciar seções e produtos
+
+- O gerente pode criar, renomear e excluir seções.
+- O sistema não permite duas seções com o mesmo nome; a comparação ignora diferenças entre maiúsculas e minúsculas.
+- Renomear uma seção mantém nela os produtos que já estavam associados.
+- Ao excluir uma seção, o aplicativo pede confirmação. Se confirmar, a seção e os produtos associados a ela são apagados; se cancelar, permanecem.
+- O gerente pode cadastrar e editar produtos, informando nome, preço e seção, e pode mover um produto para outra seção.
+- Para excluir um produto, o aplicativo pede confirmação. Se cancelar, o produto permanece; se confirmar, é apagado.
+- Produtos existentes sem seção continuam visíveis no gerenciamento para que possam ser associados a uma seção.
+
+#### RF-11 — Consultar produtos por seção ao lançar um pedido
+
+- A tela de lançamento apresenta as seções disponíveis.
+- Antes de escolher uma seção, os produtos não são apresentados na lista de lançamento.
+- Ao escolher uma seção, a tela apresenta os produtos associados a ela para adicionar ao pedido.
+
+**Estado de validação dos RF-09 a RF-11:** as funcionalidades foram implementadas no código local, mas ainda aguardam teste manual. A documentação registra o comportamento acordado; não afirma que o teste já foi concluído.
