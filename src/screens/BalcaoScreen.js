@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { styles } from '../styles/styles';
+import { imprimirComprovante } from '../utils/imprimirComprovante';
 
 export default function BalcaoScreen({ comandasAtivas, calcularTotalComanda, confirmarPagamento }) {
   return (
@@ -39,12 +40,25 @@ export default function BalcaoScreen({ comandasAtivas, calcularTotalComanda, con
               </View>
 
               {item.status === 'fechada' && (
-                <TouchableOpacity
-                  style={[styles.botaoVerde, { marginTop: 10, padding: 10 }]}
-                  onPress={() => confirmarPagamento(item)}
-                >
-                  <Text style={styles.textoBotao}>💰 Confirmar Pagamento</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={[styles.botaoVerde, { marginTop: 10, padding: 10 }]}
+                    onPress={() => imprimirComprovante({
+                      numeroMesa: item.mesa,
+                      itens: item.itens,
+                      total: calcularTotalComanda(item.itens)
+                    })}
+                  >
+                    <Text style={styles.textoBotao}>🖨️ Imprimir Comprovante</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.botaoVerde, { marginTop: 10, padding: 10 }]}
+                    onPress={() => confirmarPagamento(item)}
+                  >
+                    <Text style={styles.textoBotao}>💰 Confirmar Pagamento</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
           )}

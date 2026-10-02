@@ -1,18 +1,24 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { styles } from '../styles/styles';
-import { imprimirComprovante } from '../utils/imprimirComprovante';
 
 export default function ComandaScreen({
   mesa,
   setMesa,
   cardapio,
+  secoesCardapio,
   itensComanda,
   adicionarItemComanda,
   removerItemComanda,
   calcularTotalRascunho,
   enviarPedido
 }) {
+  const [secaoSelecionadaId, setSecaoSelecionadaId] = useState(null);
+  const secaoSelecionada = secoesCardapio.find((secao) => secao.id === secaoSelecionadaId);
+  const produtosDaSecao = secaoSelecionada
+    ? cardapio.filter((produto) => produto.secaoId === secaoSelecionada.id)
+    : [];
+
   return (
     <View style={styles.conteudoAba}>
       <View style={styles.areaMesa}>
@@ -27,17 +33,48 @@ export default function ComandaScreen({
       </View>
 
       <Text style={styles.subtitulo}>Toque para adicionar itens:</Text>
+      {secoesCardapio.length === 0 ? (
+        <Text style={styles.textoVazio}>O gerente precisa cadastrar as seções do cardápio.</Text>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 48, marginBottom: 8 }}>
+          {secoesCardapio.map((secao) => {
+            const selecionada = secao.id === secaoSelecionada?.id;
+            return (
+              <TouchableOpacity
+                key={secao.id}
+                style={{
+                  backgroundColor: selecionada ? '#1976D2' : '#E5E5E5',
+                  borderRadius: 18,
+                  marginRight: 8,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10
+                }}
+                onPress={() => setSecaoSelecionadaId(secao.id)}
+              >
+                <Text style={{ color: selecionada ? '#fff' : '#222', fontWeight: '600' }}>{secao.nome}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <View style={{ height: 130 }}>
-        <FlatList
-          data={cardapio}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.cardCardapioComanda} onPress={() => adicionarItemComanda(item)}>
-              <Text style={styles.nomeProduto}>{item.nome}</Text>
-              <Text style={styles.precoVerde}>+ R$ {item.preco.toFixed(2)}</Text>
-            </TouchableOpacity>
-          )}
-        />
+        {!secaoSelecionada ? (
+          <Text style={styles.textoVazio}>Escolha uma seção para ver os produtos.</Text>
+        ) : produtosDaSecao.length === 0 ? (
+          <Text style={styles.textoVazio}>Não há produtos nesta seção.</Text>
+        ) : (
+          <FlatList
+            data={produtosDaSecao}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.cardCardapioComanda} onPress={() => adicionarItemComanda(item)}>
+                <Text style={styles.nomeProduto}>{item.nome}</Text>
+                <Text style={styles.precoVerde}>+ R$ {item.preco.toFixed(2)}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
       </View>
 
       <Text style={styles.subtitulo}>Itens a Enviar:</Text>
@@ -84,17 +121,6 @@ export default function ComandaScreen({
 
         <TouchableOpacity style={styles.botaoAzul} onPress={enviarPedido}>
           <Text style={styles.textoBotao}>Enviar Pedido para o Balcão</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.botaoAzul, { backgroundColor: '#28a745', marginTop: 10 }]} 
-          onPress={() => imprimirComprovante({
-            mesa,
-            itens: itensComanda,
-            total: calcularTotalRascunho()
-          })}
-        >
-          <Text style={styles.textoBotao}>🖨️ Imprimir Comprovante</Text>
         </TouchableOpacity>
       </View>
     </View>

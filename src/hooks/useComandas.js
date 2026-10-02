@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { db } from '../config/firebaseConfig';
-import { ref, onValue, set, push, remove } from 'firebase/database';
+import { ref, onValue, set, push, remove, update } from 'firebase/database';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 const SENHA_CORRETA = '1234';
@@ -14,10 +14,7 @@ const SENHA_CORRETA = '1234';
 export function useComandas() {
   // CARDÁPIO BASE
   const [cardapio, setCardapio] = useState([]);
-
-  // ESTADOS DO CADASTRO DE CARDÁPIO
-  const [novoNome, setNovoNome] = useState('');
-  const [novoPreco, setNovoPreco] = useState('');
+  const [secoesCardapio, setSecoesCardapio] = useState([]);
 
   // ESTADOS DO LANÇAMENTO DE COMANDA
   const [mesa, setMesa] = useState('');
@@ -39,12 +36,21 @@ export function useComandas() {
   // ---------------------------------------------------------------
   useEffect(() => {
     const auth = getAuth();
+    let unsubscribeCardapio;
+    let unsubscribeSecoes;
+    let unsubscribeAtivas;
+    let unsubscribeHistorico;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeCardapio?.();
+      unsubscribeSecoes?.();
+      unsubscribeAtivas?.();
+      unsubscribeHistorico?.();
+
       if (user) {
         // 1. ESCUTAR CARDÁPIO
         const cardapioRef = ref(db, 'cardapio');
-        const unsubscribeCardapio = onValue(
+        unsubscribeCardapio = onValue(
           cardapioRef,
           (snapshot) => {
             const data = snapshot.val();
@@ -60,13 +66,15 @@ export function useComandas() {
                 .map((item, index) => ({
                   id: String(item.id || index),
                   nome: item.nome || 'Sem nome',
-                  preco: typeof item.preco === 'number' ? item.preco : parseFloat(item.preco) || 0
+                  preco: typeof item.preco === 'number' ? item.preco : parseFloat(item.preco) || 0,
+                  secaoId: item.secaoId || ''
                 }));
             } else if (typeof data === 'object') {
               listaTratada = Object.entries(data).map(([key, valores]) => ({
                 id: key,
                 nome: valores?.nome || 'Sem nome',
-                preco: typeof valores?.preco === 'number' ? valores.preco : parseFloat(valores?.preco) || 0
+                preco: typeof valores?.preco === 'number' ? valores.preco : parseFloat(valores?.preco) || 0,
+                secaoId: valores?.secaoId || ''
               }));
             }
             setCardapio(listaTratada);
@@ -76,9 +84,24 @@ export function useComandas() {
           }
         );
 
-        // 2. ESCUTAR COMANDAS ATIVAS
+        // 2. ESCUTAR SEÇÕES DO CARDÁPIO
+        unsubscribeSecoes = onValue(
+          ref(db, 'secoesCardapio'),
+          (snapshot) => {
+            const data = snapshot.val() || {};
+            const lista = Object.entries(data).map(([id, valores]) => ({
+              id,
+              nome: valores?.nome || ''
+            }));
+            lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            setSecoesCardapio(lista);
+          },
+          (error) => console.error('[ERRO SEÇÕES CARDÁPIO FIREBASE]:', error)
+        );
+
+        // 3. ESCUTAR COMANDAS ATIVAS
         const ativasRef = ref(db, 'comandasAtivas');
-        const unsubscribeAtivas = onValue(
+        unsubscribeAtivas = onValue(
           ativasRef,
           (snapshot) => {
             const data = snapshot.val() || {};
@@ -93,9 +116,9 @@ export function useComandas() {
           }
         );
 
-        // 3. ESCUTAR HISTÓRICO DE COMANDAS
+        // 4. ESCUTAR HISTÓRICO DE COMANDAS
         const historicoRef = ref(db, 'historicoComandas');
-        const unsubscribeHistorico = onValue(
+        unsubscribeHistorico = onValue(
           historicoRef,
           (snapshot) => {
             const data = snapshot.val() || {};
@@ -108,20 +131,24 @@ export function useComandas() {
           }
         );
 
-        return () => {
-          unsubscribeCardapio();
-          unsubscribeAtivas();
-          unsubscribeHistorico();
-        };
       } else {
         // Limpa os dados se o usuário deslogar
         setCardapio([]);
+        setSecoesCardapio([]);
         setComandasAtivas([]);
         setHistoricoComandas([]);
+        setHistoricoAutorizado(false);
+        setSenhaDigitada('');
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeCardapio?.();
+      unsubscribeSecoes?.();
+      unsubscribeAtivas?.();
+      unsubscribeHistorico?.();
+    };
   }, []);
 
   // ---------------------------------------------------------------
@@ -189,43 +216,171 @@ export function useComandas() {
   // ---------------------------------------------------------------
   // CARDÁPIO
   // ---------------------------------------------------------------
-  const adicionarProdutoCardapio = () => {
-    if (!novoNome.trim() || !novoPreco.trim()) {
-      return Alert.alert('Atenção', 'Preencha o nome e o preço!');
+  const validarSenhaGestao = (senha) => senha === SENHA_CORRETA;
+
+  const nomeSecaoEmUso = (nome, ignorarId = null) => {
+    const nomeNormalizado = nome.trim().toLocaleLowerCase('pt-BR');
+    return secoesCardapio.some((secao) =>
+      secao.id !== ignorarId && secao.nome.trim().toLocaleLowerCase('pt-BR') === nomeNormalizado
+    );
+  };
+
+  const adicionarSecaoCardapio = (nome) => {
+    const nomeLimpo = nome.trim();
+    if (!nomeLimpo) {
+      Alert.alert('Atenção', 'Digite o nome da seção.');
+      return false;
+    }
+    if (nomeSecaoEmUso(nomeLimpo)) {
+      Alert.alert('Seção já existe', 'Escolha um nome diferente para a seção.');
+      return false;
     }
 
-    const valorNumerico = parseFloat(novoPreco.replace(',', '.'));
-
-    if (isNaN(valorNumerico) || valorNumerico <= 0) {
-      return Alert.alert('Erro', 'Digite um preço válido maior que zero!');
-    }
-
-    const novoRef = push(ref(db, 'cardapio'));
-    const idGerado = novoRef.key;
-
-    set(novoRef, {
-      id: idGerado,
-      nome: novoNome.trim(),
-      preco: valorNumerico
-    })
+    const novaRef = push(ref(db, 'secoesCardapio'));
+    return set(novaRef, { id: novaRef.key, nome: nomeLimpo })
       .then(() => {
-        setNovoNome('');
-        setNovoPreco('');
-        Alert.alert('Sucesso', 'Produto cadastrado com sucesso!');
+        Alert.alert('Sucesso', 'Seção cadastrada.');
+        return true;
       })
       .catch((error) => {
-        console.error('[cardapio] ERRO ao cadastrar produto: ', error);
+        console.error('[cardapio] Erro ao cadastrar seção:', error);
+        Alert.alert('Erro', 'Não foi possível salvar a seção.');
+        return false;
+      });
+  };
+
+  const renomearSecaoCardapio = (secaoId, nome) => {
+    const nomeLimpo = nome.trim();
+    if (!nomeLimpo) {
+      Alert.alert('Atenção', 'Digite o nome da seção.');
+      return false;
+    }
+    if (nomeSecaoEmUso(nomeLimpo, secaoId)) {
+      Alert.alert('Seção já existe', 'Escolha um nome diferente para a seção.');
+      return false;
+    }
+
+    const secao = secoesCardapio.find((item) => item.id === secaoId);
+    if (!secao) return;
+
+    return set(ref(db, `secoesCardapio/${secaoId}`), { ...secao, nome: nomeLimpo })
+      .then(() => {
+        Alert.alert('Sucesso', 'Seção atualizada.');
+        return true;
+      })
+      .catch((error) => {
+        console.error('[cardapio] Erro ao renomear seção:', error);
+        Alert.alert('Erro', 'Não foi possível atualizar a seção.');
+        return false;
+      });
+  };
+
+  const removerSecaoCardapio = (secaoId) => {
+    const secao = secoesCardapio.find((item) => item.id === secaoId);
+    if (!secao) return;
+
+    const produtosDaSecao = cardapio.filter((produto) => produto.secaoId === secaoId);
+    const mensagem = produtosDaSecao.length > 0
+      ? `Excluir a seção "${secao.nome}" também apagará ${produtosDaSecao.length} produto(s) associado(s). Deseja continuar?`
+      : `Deseja excluir a seção "${secao.nome}"?`;
+
+    Alert.alert('Confirmar exclusão', mensagem, [
+      { text: 'Não', style: 'cancel' },
+      {
+        text: 'Sim, excluir',
+        style: 'destructive',
+        onPress: () => {
+          const alteracoes = { [`secoesCardapio/${secaoId}`]: null };
+          produtosDaSecao.forEach((produto) => {
+            alteracoes[`cardapio/${produto.id}`] = null;
+          });
+
+          update(ref(db), alteracoes).catch((error) => {
+            console.error('[cardapio] Erro ao excluir seção:', error);
+            Alert.alert('Erro', 'Não foi possível excluir a seção e os seus produtos.');
+          });
+        }
+      }
+    ]);
+  };
+
+  const adicionarProdutoCardapio = (nome, preco, secaoId) => {
+    const nomeLimpo = nome.trim();
+    if (!nomeLimpo || !preco.trim() || !secoesCardapio.some((secao) => secao.id === secaoId)) {
+      Alert.alert('Atenção', 'Preencha o nome, o preço e escolha uma seção válida.');
+      return false;
+    }
+
+    const valorNumerico = parseFloat(preco.replace(',', '.'));
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      Alert.alert('Erro', 'Digite um preço válido maior que zero.');
+      return false;
+    }
+
+    const novaRef = push(ref(db, 'cardapio'));
+    return set(novaRef, {
+      id: novaRef.key,
+      nome: nomeLimpo,
+      preco: valorNumerico,
+      secaoId
+    })
+      .then(() => {
+        Alert.alert('Sucesso', 'Produto cadastrado com sucesso!');
+        return true;
+      })
+      .catch((error) => {
+        console.error('[cardapio] Erro ao cadastrar produto:', error);
         Alert.alert('Erro', `Não foi possível salvar: ${error.message}`);
+        return false;
+      });
+  };
+
+  const atualizarProdutoCardapio = (produtoId, nome, preco, secaoId) => {
+    const nomeLimpo = nome.trim();
+    if (!nomeLimpo || !preco.trim() || !secoesCardapio.some((secao) => secao.id === secaoId)) {
+      Alert.alert('Atenção', 'Preencha o nome, o preço e escolha uma seção válida.');
+      return false;
+    }
+
+    const valorNumerico = parseFloat(preco.replace(',', '.'));
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      Alert.alert('Erro', 'Digite um preço válido maior que zero.');
+      return false;
+    }
+
+    const produto = cardapio.find((item) => item.id === produtoId);
+    if (!produto) return;
+
+    return set(ref(db, `cardapio/${produtoId}`), {
+      ...produto,
+      nome: nomeLimpo,
+      preco: valorNumerico,
+      secaoId
+    })
+      .then(() => {
+        Alert.alert('Sucesso', 'Produto atualizado.');
+        return true;
+      })
+      .catch((error) => {
+        console.error('[cardapio] Erro ao atualizar produto:', error);
+        Alert.alert('Erro', 'Não foi possível atualizar o produto.');
+        return false;
       });
   };
 
   const removerProdutoCardapio = (produtoId) => {
-    Alert.alert('Remover produto', 'Tem certeza que deseja remover este item do cardápio?', [
-      { text: 'Cancelar', style: 'cancel' },
+    const produto = cardapio.find((item) => item.id === produtoId);
+    if (!produto) return;
+
+    Alert.alert('Confirmar exclusão', `Deseja excluir o produto "${produto.nome}"?`, [
+      { text: 'Não', style: 'cancel' },
       {
-        text: 'Remover',
+        text: 'Sim, excluir',
         style: 'destructive',
-        onPress: () => remove(ref(db, `cardapio/${produtoId}`))
+        onPress: () => remove(ref(db, `cardapio/${produtoId}`)).catch((error) => {
+          console.error('[cardapio] Erro ao excluir produto:', error);
+          Alert.alert('Erro', 'Não foi possível excluir o produto.');
+        })
       }
     ]);
   };
@@ -279,6 +434,16 @@ export function useComandas() {
     const comandaMesa = comandasAtivas.find((c) => c.mesa === numeroMesa);
     if (!comandaMesa) return;
 
+    if (comandaMesa.status === 'fechada') {
+      return Alert.alert(
+        'Comanda fechada',
+        `Reabra a comanda da Mesa ${numeroMesa} antes de remover itens.`
+      );
+    }
+
+    const produtoRemovido = comandaMesa.itens.find((item) => item.id === produtoId);
+    if (!produtoRemovido) return;
+
     const itensAtualizados = comandaMesa.itens
       .map((item) => {
         if (item.id === produtoId) {
@@ -288,16 +453,30 @@ export function useComandas() {
       })
       .filter((item) => item.quantidade > 0);
 
-    if (itensAtualizados.length === 0) {
-      remove(ref(db, `comandasAtivas/${numeroMesa}`))
-        .then(() => Alert.alert('Mesa Liberada', `Todos os itens da Mesa ${numeroMesa} foram removidos.`))
-        .catch((err) => console.error('Erro ao remover mesa: ', err));
-    } else {
-      set(ref(db, `comandasAtivas/${numeroMesa}`), {
-        ...comandaMesa,
-        itens: itensAtualizados
-      }).catch((err) => console.error('Erro ao atualizar itens da mesa: ', err));
-    }
+    const ultimaUnidadeDaMesa = itensAtualizados.length === 0;
+    const mensagemConfirmacao = ultimaUnidadeDaMesa
+      ? `Remover a última unidade de ${produtoRemovido.nome}? A Mesa ${numeroMesa} ficará sem itens e será liberada.`
+      : `Deseja remover uma unidade de ${produtoRemovido.nome} da Mesa ${numeroMesa}?`;
+
+    Alert.alert('Confirmar remoção', mensagemConfirmacao, [
+      { text: 'Não', style: 'cancel' },
+      {
+        text: 'Sim',
+        style: 'destructive',
+        onPress: () => {
+          if (ultimaUnidadeDaMesa) {
+            remove(ref(db, `comandasAtivas/${numeroMesa}`))
+              .then(() => Alert.alert('Mesa Liberada', `Todos os itens da Mesa ${numeroMesa} foram removidos.`))
+              .catch((err) => console.error('Erro ao remover mesa: ', err));
+          } else {
+            set(ref(db, `comandasAtivas/${numeroMesa}`), {
+              ...comandaMesa,
+              itens: itensAtualizados
+            }).catch((err) => console.error('Erro ao atualizar itens da mesa: ', err));
+          }
+        }
+      }
+    ]);
   };
 
   const selecionarMesaParaAdicionar = (numeroMesa, setAbaAtiva) => {
@@ -414,11 +593,13 @@ export function useComandas() {
 
   return {
     cardapio,
-    novoNome,
-    setNovoNome,
-    novoPreco,
-    setNovoPreco,
+    secoesCardapio,
+    validarSenhaGestao,
+    adicionarSecaoCardapio,
+    renomearSecaoCardapio,
+    removerSecaoCardapio,
     adicionarProdutoCardapio,
+    atualizarProdutoCardapio,
     removerProdutoCardapio,
 
     mesa,

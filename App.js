@@ -21,6 +21,15 @@ export default function App() {
 
   const c = useComandas();
 
+  const trocarAba = (proximaAba) => {
+    if (abaAtiva === 'historico' && proximaAba !== 'historico') {
+      c.setHistoricoAutorizado(false);
+      c.setSenhaDigitada('');
+    }
+
+    setAbaAtiva(proximaAba);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUsuario(user);
@@ -46,13 +55,14 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <MenuAbas abaAtiva={abaAtiva} setAbaAtiva={setAbaAtiva} totalMesasAtivas={c.comandasAtivas.length} />
+      <MenuAbas abaAtiva={abaAtiva} setAbaAtiva={trocarAba} totalMesasAtivas={c.comandasAtivas.length} />
 
       {abaAtiva === 'comanda' && (
         <ComandaScreen
           mesa={c.mesa}
           setMesa={c.setMesa}
           cardapio={c.cardapio}
+          secoesCardapio={c.secoesCardapio}
           itensComanda={c.itensComanda}
           adicionarItemComanda={c.adicionarItemComanda}
           removerItemComanda={c.removerItemComanda}
@@ -66,7 +76,7 @@ export default function App() {
           comandasAtivas={c.comandasAtivas}
           calcularTotalComanda={c.calcularTotalComanda}
           removerItemDaMesa={c.removerItemDaMesa}
-          selecionarMesaParaAdicionar={(numeroMesa) => c.selecionarMesaParaAdicionar(numeroMesa, setAbaAtiva)}
+          selecionarMesaParaAdicionar={(numeroMesa) => c.selecionarMesaParaAdicionar(numeroMesa, trocarAba)}
           fecharComanda={c.fecharComanda}
           reabrirComanda={c.reabrirComanda}
         />
@@ -94,11 +104,13 @@ export default function App() {
       {abaAtiva === 'cardapio' && (
         <CardapioScreen
           cardapio={c.cardapio}
-          novoNome={c.novoNome}
-          setNovoNome={c.setNovoNome}
-          novoPreco={c.novoPreco}
-          setNovoPreco={c.setNovoPreco}
+          secoesCardapio={c.secoesCardapio}
+          validarSenhaGestao={c.validarSenhaGestao}
+          adicionarSecaoCardapio={c.adicionarSecaoCardapio}
+          renomearSecaoCardapio={c.renomearSecaoCardapio}
+          removerSecaoCardapio={c.removerSecaoCardapio}
           adicionarProdutoCardapio={c.adicionarProdutoCardapio}
+          atualizarProdutoCardapio={c.atualizarProdutoCardapio}
           removerProdutoCardapio={c.removerProdutoCardapio}
         />
       )}

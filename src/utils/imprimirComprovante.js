@@ -1,13 +1,24 @@
 import * as Print from 'expo-print';
 
 export const imprimirComprovante = async (dadosComanda) => {
-  // 1. Gera as linhas da tabela de itens
-  const itensHtml = dadosComanda.itens.map(item => `
-    <tr>
-      <td style="text-align: left; padding: 4px 0;">${item.qtd}x ${item.nome}</td>
-      <td style="text-align: right; padding: 4px 0;">R$ ${(item.preco * item.qtd).toFixed(2)}</td>
-    </tr>
-  `).join('');
+  const numeroMesa = dadosComanda.numeroMesa ?? dadosComanda.mesa ?? 'Balcão';
+  const dataComprovante = dadosComanda.data
+    ?? (dadosComanda.fechadaEm
+      ? new Date(dadosComanda.fechadaEm).toLocaleString('pt-BR')
+      : new Date().toLocaleString('pt-BR'));
+
+  // Os registros atuais usam `quantidade`; `qtd` continua aceito para os dados de teste existentes.
+  const itensHtml = dadosComanda.itens.map(item => {
+    const quantidade = Number(item.quantidade ?? item.qtd ?? 0);
+    const preco = Number(item.preco) || 0;
+
+    return `
+      <tr>
+        <td style="text-align: left; padding: 4px 0;">${quantidade}x ${item.nome}</td>
+        <td style="text-align: right; padding: 4px 0;">R$ ${(preco * quantidade).toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
 
   // 2. Monta o HTML completo dentro da função para ter acesso às variáveis
   const htmlContent = `
@@ -48,9 +59,9 @@ export const imprimirComprovante = async (dadosComanda) => {
       <div class="divider"></div>
       
       <div class="info">
-        <div><strong>Mesa / Comanda:</strong> #${dadosComanda.numeroMesa || 'Balcão'}</div>
+        <div><strong>Mesa / Comanda:</strong> #${numeroMesa}</div>
         ${dadosComanda.cliente ? `<div><strong>Cliente:</strong> ${dadosComanda.cliente}</div>` : ''}
-        <div><strong>Data:</strong> ${dadosComanda.data || new Date().toLocaleString('pt-BR')}</div>
+        <div><strong>Data:</strong> ${dataComprovante}</div>
       </div>
       
       <div class="divider"></div>
